@@ -1,0 +1,44 @@
+{
+    "name": "misskey-latex-bot",
+    "version": "1.0.0",
+    "description": "MisskeyでLaTeX表記の画像を返します",
+    "main": "index.js",
+    "scripts": {
+        "dev": "NODE_ENV=development ts-node server.ts",
+        "build": "webpack",
+        "start": "node dist/server.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/BonyChops/misskey-latex-bot.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/BonyChops/misskey-latex-bot/issues"
+    },
+    "homepage": "https://github.com/BonyChops/misskey-latex-bot#readme",
+    "dependencies": {
+        "axios": "^1.4.0",
+        "dotenv": "^16.3.1",
+        "fastify": "^4.19.2",
+        "mathjax-node": "^2.1.1",
+        "pino-pretty": "^10.0.1",
+        "svg2png": "^4.1.1"
+    },
+    "devDependencies": {
+        "@types/node": "^20.4.0",
+        "@types/svg2png": "^4.1.2",
+        "@typescript-eslint/eslint-plugin": "^5.61.0",
+        "@typescript-eslint/parser": "^5.61.0",
+        "eslint": "^8.44.0",
+        "eslint-config-prettier": "^8.8.0",
+        "prettier": "^3.0.0",
+        "ts-loader": "^9.4.4",
+        "ts-node": "^10.9.1",
+        "typescript": "^5.1.6",
+        "webpack": "^5.88.1",
+        "webpack-cli": "^5.1.4"
+    }
+}
