@@ -1,7 +1,6 @@
 // Import the framework and instantiate it
 import Fastify, { FastifyRequest } from 'fastify';
-import * as mjAPI from 'mathjax-node';
-import * as svg2png from 'svg2png';
+import svg2png from 'svg2png';
 import axios from 'axios';
 import { config } from 'dotenv';
 import FormData from 'form-data';
