@@ -1,9 +1,15 @@
 // Import the framework and instantiate it
 import Fastify, { FastifyRequest } from 'fastify';
-import svg2png from 'svg2png';
 import axios from 'axios';
 import { config } from 'dotenv';
 import FormData from 'form-data';
+import { mathjax } from 'mathjax-full/js/mathjax';
+import { TeX } from 'mathjax-full/js/input/tex';
+import { SVG } from 'mathjax-full/js/output/svg';
+import { LiteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor';
+import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html';
+import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages';
+import sharp from 'sharp';
 
 config();
 
@@ -33,77 +39,65 @@ interface ReqBody {
     content: string;
 }
 
-mjAPI.config({
-    MathJax: {}
-});
-mjAPI.start();
-
 fastify.post(
     '/generate',
     async function handler(req: FastifyRequest<{ Body: ReqBody }>, res) {
+        // for check misskey webhook body
         console.log(req?.body);
         if (!req?.body?.content) {
             throw new Error('No content provided');
         }
-        await mjAPI.typeset({
-            math: req?.body?.content,
-            format: 'TeX', // or "inline-TeX", "MathML"
-            svg: true // or svg:true, or html:true
+        const adaptor = new LiteAdaptor();
+        (RegisterHTMLHandler as any)(adaptor);
+
+        const html = mathjax.document('', {
+            InputJax: new TeX({ packages: AllPackages }),
+            OutputJax: new SVG({ fontCache: 'none' })
         });
 
-        const typesetResult = await mjAPI.typeset({
-            math: req?.body?.content,
-            format: 'TeX', // or "inline-TeX", "MathML"
-            svg: true // or svg:true, or html:true
-        });
+        const svg = adaptor.innerHTML(
+            html.convert(req?.body?.content, { display: true })
+        );
 
-        if (!typesetResult.errors) {
-            let svgString = typesetResult.svg;
-            svgString = svgString.replace(
-                '<svg ',
-                '<svg style="background-color: white;" '
+        const png = await sharp(Buffer.from(svg))
+            .resize({ height: 200 })
+            .flatten({ background: { r: 255, g: 255, b: 255 } })
+            .png()
+            .toBuffer();
+
+        const uploadJob = async () => {
+            const form = new FormData();
+            form.append('i', process.env.MISSKEY_TOKEN ?? 'none');
+            form.append('file', Buffer.from(png));
+            const uploadResult = await axios.post(
+                `${process.env.MISSKEY_HOST}/api/drive/files/create`,
+                form
             );
 
-            const buffer = Buffer.from(svgString);
-            const resultImage = svg2png.sync(buffer, { height: 200 });
-            const uploadJob = async () => {
-                const form = new FormData();
-                form.append('i', process.env.MISSKEY_TOKEN ?? 'none');
-                form.append('file', Buffer.from(resultImage));
-                const uploadResult = await axios.post(
-                    `${process.env.MISSKEY_HOST}/api/drive/files/create`,
-                    form
-                );
-
-                console.log(uploadResult.data);
-
-                const result2 = await axios.post(
-                    `${process.env.MISSKEY_HOST}/api/notes/create`,
-                    {
-                        mediaIds: [uploadResult.data.id],
-                        i: process.env.MISSKEY_TOKEN
-                    }
-                );
-            };
-            const wrapper = async () => {
-                try {
-                    await uploadJob();
-                } catch (e) {
-                    console.error(e);
-                    console.error((e as any).response.data);
-                }
-            };
-            wrapper();
-            res.type('image/png').send(resultImage);
-        } else {
-            throw new Error('Failed to generate SVG');
-        }
+            await axios.post(`${process.env.MISSKEY_HOST}/api/notes/create`, {
+                mediaIds: [uploadResult.data.id],
+                i: process.env.MISSKEY_TOKEN
+            });
+        };
+        const wrapper = async () => {
+            try {
+                await uploadJob();
+            } catch (e) {
+                console.error(e);
+                console.error((e as any).response.data);
+            }
+        };
+        // wrapper();
+        res.type('image/png').send(png);
     }
 );
 (async () => {
     // Run the server!
     try {
-        await fastify.listen({ port: Number(process.env.PORT ?? 8080) });
+        await fastify.listen({
+            host: '0.0.0.0',
+            port: Number(process.env.PORT ?? 8080)
+        });
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);

@@ -12,7 +12,11 @@ RUN npm run build
 
 FROM node:16-slim
 
-COPY --from=builder /app/dist /
+WORKDIR /app
+COPY package*.json ./
+COPY --from=builder /app/dist /app/dist
+RUN npm install --production
+
 
 EXPOSE 8080
-CMD [ "node", "server.js" ]
+CMD [ "node", "dist/server.js" ]
