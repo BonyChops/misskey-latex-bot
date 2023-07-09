@@ -56,10 +56,12 @@ fastify.post(
             throw new Error('Invalid secret');
         }
         const { body } = req;
-        const content = body?.body?.note?.text?.replace(
-            `@${process.env.BOTNAME}`,
-            ''
-        );
+        const content = body?.body?.note?.text
+            ?.replace(`@${process.env.BOTNAME}`, '')
+            ?.replace(
+                `@${process.env.BOTNAME}@${process.env.MISSKEY_HOST}`,
+                ''
+            );
         if (!content) {
             throw new Error('No content provided');
         }
@@ -84,15 +86,18 @@ fastify.post(
             form.append('i', process.env.MISSKEY_TOKEN ?? 'none');
             form.append('file', Buffer.from(png));
             const uploadResult = await axios.post(
-                `${process.env.MISSKEY_HOST}/api/drive/files/create`,
+                `https://${process.env.MISSKEY_HOST}/api/drive/files/create`,
                 form
             );
 
-            await axios.post(`${process.env.MISSKEY_HOST}/api/notes/create`, {
-                mediaIds: [uploadResult.data.id],
-                i: process.env.MISSKEY_TOKEN,
-                replyId: body?.body?.note?.id
-            });
+            await axios.post(
+                `https://${process.env.MISSKEY_HOST}/api/notes/create`,
+                {
+                    mediaIds: [uploadResult.data.id],
+                    i: process.env.MISSKEY_TOKEN,
+                    replyId: body?.body?.note?.id
+                }
+            );
         };
         const wrapper = async () => {
             try {
