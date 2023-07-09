@@ -57,11 +57,8 @@ fastify.post(
         }
         const { body } = req;
         const content = body?.body?.note?.text
-            ?.replace(`@${process.env.BOTNAME}`, '')
-            ?.replace(
-                `@${process.env.BOTNAME}@${process.env.MISSKEY_HOST}`,
-                ''
-            );
+            ?.replace(`@${process.env.BOTNAME}@${process.env.MISSKEY_HOST}`, '')
+            ?.replace(`@${process.env.BOTNAME}`, '');
         if (!content) {
             throw new Error('No content provided');
         }
