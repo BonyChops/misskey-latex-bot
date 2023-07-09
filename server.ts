@@ -36,7 +36,12 @@ const fastify = Fastify({
 });
 
 interface ReqBody {
-    content: string;
+    body: {
+        note: {
+            text: string;
+            id: string;
+        };
+    };
 }
 
 fastify.post(
@@ -44,7 +49,15 @@ fastify.post(
     async function handler(req: FastifyRequest<{ Body: ReqBody }>, res) {
         // for check misskey webhook body
         console.log(req?.body);
-        if (!req?.body?.content) {
+        if (
+            req?.headers['x-misskey-hook-secret'] !==
+            process.env.MISSKEY_HOOK_SECRET
+        ) {
+            throw new Error('Invalid secret');
+        }
+        const { body } = req;
+        const content = body?.body?.note?.text;
+        if (!content) {
             throw new Error('No content provided');
         }
         const adaptor = new LiteAdaptor();
@@ -55,9 +68,7 @@ fastify.post(
             OutputJax: new SVG({ fontCache: 'none' })
         });
 
-        const svg = adaptor.innerHTML(
-            html.convert(req?.body?.content, { display: true })
-        );
+        const svg = adaptor.innerHTML(html.convert(content, { display: true }));
 
         const png = await sharp(Buffer.from(svg))
             .resize({ height: 200 })
@@ -76,7 +87,8 @@ fastify.post(
 
             await axios.post(`${process.env.MISSKEY_HOST}/api/notes/create`, {
                 mediaIds: [uploadResult.data.id],
-                i: process.env.MISSKEY_TOKEN
+                i: process.env.MISSKEY_TOKEN,
+                replyId: body?.body?.note?.id
             });
         };
         const wrapper = async () => {
@@ -87,8 +99,8 @@ fastify.post(
                 console.error((e as any).response.data);
             }
         };
-        // wrapper();
-        res.type('image/png').send(png);
+        wrapper();
+        return 'OK';
     }
 );
 (async () => {
