@@ -56,7 +56,10 @@ fastify.post(
             throw new Error('Invalid secret');
         }
         const { body } = req;
-        const content = body?.body?.note?.text;
+        const content = body?.body?.note?.text?.replace(
+            `@${process.env.BOTNAME}`,
+            ''
+        );
         if (!content) {
             throw new Error('No content provided');
         }
